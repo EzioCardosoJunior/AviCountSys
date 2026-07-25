@@ -1,7 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
+import { ApiService } from '../../services/api.service';
+
+import { Status } from '../../models/status';
 
 @Component({
   selector: 'app-dashboard',
@@ -13,6 +16,32 @@ import { ButtonModule } from 'primeng/button';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
-export class Dashboard {
+export class Dashboard implements OnInit {
+
+    status?: Status;
+
+    constructor(
+        private api: ApiService
+    ) {}
+
+    ngOnInit(): void {
+
+        this.api.getStatus().subscribe({
+
+            next: (response) => {
+
+                this.status = response.data;
+
+            },
+
+            error: (err) => {
+
+                console.error(err);
+
+            }
+
+        });
+
+    }
 
 }

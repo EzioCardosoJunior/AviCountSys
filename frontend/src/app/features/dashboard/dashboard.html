@@ -1,12 +1,17 @@
 <p-card header="AviCount">
 
-    <p>
-        Sistema de contagem inteligente de aves.
-    </p>
+    @if(status){
 
-    <p-button
-        label="Sistema Online"
-        icon="pi pi-check">
-    </p-button>
+        <p><strong>Sistema:</strong> {{ status.system }}</p>
+
+        <p><strong>Status:</strong> {{ status.status }}</p>
+
+        <p><strong>Versão:</strong> {{ status.version }}</p>
+
+    } @else {
+
+        <p>Conectando ao backend...</p>
+
+    }
 
 </p-card>
