@@ -1,10 +1,23 @@
 import { Routes } from '@angular/router';
 
+import { MainLayout } from './layout/main-layout/main-layout';
+
+
 export const routes: Routes = [
-  {
-    path: '',
-    loadComponent: () =>
-      import('./features/dashboard/dashboard')
-        .then(m => m.Dashboard)
-  }
+
+    {
+        path: '',
+        component: MainLayout,
+        children: [
+
+            {
+                path: '',
+                loadComponent: () =>
+                    import('./features/dashboard/dashboard')
+                    .then(m => m.Dashboard)
+            }
+
+        ]
+    }
+
 ];
