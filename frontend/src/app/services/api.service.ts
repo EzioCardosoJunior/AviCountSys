@@ -6,18 +6,18 @@ import { ApiResponse } from '../models/api-response';
 import { Status } from '../models/status';
 
 @Injectable({
-  providedIn: 'root'
+    providedIn: 'root'
 })
 export class ApiService {
- private readonly API =
-        'http://impulso247.com.br/testeagro/backend';
-        
-  constructor(private http: HttpClient) {}
+    private readonly API =
+        'https://impulso247.com.br/testeagro/backend';
 
-   getStatus(): Observable<ApiResponse<Status>> {
+    constructor(private http: HttpClient) { }
+
+    getStatus(): Observable<ApiResponse<Status>> {
 
         return this.http.get<ApiResponse<Status>>(
-            `${this.API}/api/v1/status`
+            `${this.API}/index.php?action=status`
         );
 
     }
