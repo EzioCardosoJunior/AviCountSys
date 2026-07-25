@@ -1,9 +1,41 @@
-import { Component } from '@angular/core';
+import {
+    AfterViewInit,
+    Component,
+    ElementRef,
+    ViewChild
+} from '@angular/core';
 
 @Component({
-  selector: 'app-camera-view',
-  imports: [],
-  templateUrl: './camera-view.html',
-  styleUrl: './camera-view.scss',
+    selector: 'app-camera-view',
+    standalone: true,
+    templateUrl: './camera-view.html',
+    styleUrl: './camera-view.scss'
 })
-export class CameraViewComponent {}
+export class CameraViewComponent implements AfterViewInit {
+
+    @ViewChild('video')
+    video!: ElementRef<HTMLVideoElement>;
+
+    async ngAfterViewInit() {
+
+        try {
+
+            const stream =
+                await navigator.mediaDevices.getUserMedia({
+
+                    video: true,
+                    audio: false
+
+                });
+
+            this.video.nativeElement.srcObject = stream;
+
+        } catch (e) {
+
+            console.error(e);
+
+        }
+
+    }
+
+}
