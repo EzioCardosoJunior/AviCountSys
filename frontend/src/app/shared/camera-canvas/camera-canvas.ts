@@ -6,6 +6,8 @@ import {
   ViewChild
 } from '@angular/core';
 import { ResizeHandle } from '../../models/resize-handle';
+import { DetectionService } from '../../features/cameras/services/detection.service';
+import { Detection } from '../../models/detection';
 
 @Component({
   selector: 'app-camera-canvas',
@@ -20,6 +22,10 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('canvas', { static: true })
   canvas!: ElementRef<HTMLCanvasElement>;
+
+  constructor(
+    private detectionService: DetectionService
+  ) { }
 
   // Mouse
   mouseX = 0;
@@ -55,6 +61,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
   private resizing = ResizeHandle.None;
 
   private readonly handleSize = 10;
+  private detections: Detection[] = [];
 
   async ngAfterViewInit(): Promise<void> {
 
@@ -150,56 +157,105 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     if (this.resizing !== ResizeHandle.None) {
 
+      const minWidth = 80;
+      const minHeight = 80;
+
       switch (this.resizing) {
 
         case ResizeHandle.TopLeft:
 
-          this.roiWidth += this.roiX - this.mouseX;
-          this.roiHeight += this.roiY - this.mouseY;
-          this.roiX = this.mouseX;
-          this.roiY = this.mouseY;
+          if (this.mouseX < this.roiX + this.roiWidth - minWidth) {
+
+            this.roiWidth += this.roiX - this.mouseX;
+            this.roiX = this.mouseX;
+
+          }
+
+          if (this.mouseY < this.roiY + this.roiHeight - minHeight) {
+
+            this.roiHeight += this.roiY - this.mouseY;
+            this.roiY = this.mouseY;
+
+          }
 
           break;
 
         case ResizeHandle.TopRight:
 
-          this.roiWidth = this.mouseX - this.roiX;
-          this.roiHeight += this.roiY - this.mouseY;
-          this.roiY = this.mouseY;
+          this.roiWidth = Math.max(
+            minWidth,
+            this.mouseX - this.roiX
+          );
+
+          if (this.mouseY < this.roiY + this.roiHeight - minHeight) {
+
+            this.roiHeight += this.roiY - this.mouseY;
+            this.roiY = this.mouseY;
+
+          }
 
           break;
 
         case ResizeHandle.BottomLeft:
 
-          this.roiWidth += this.roiX - this.mouseX;
-          this.roiX = this.mouseX;
-          this.roiHeight = this.mouseY - this.roiY;
+          if (this.mouseX < this.roiX + this.roiWidth - minWidth) {
+
+            this.roiWidth += this.roiX - this.mouseX;
+            this.roiX = this.mouseX;
+
+          }
+
+          this.roiHeight = Math.max(
+            minHeight,
+            this.mouseY - this.roiY
+          );
 
           break;
 
         case ResizeHandle.BottomRight:
 
-          this.roiWidth = this.mouseX - this.roiX;
-          this.roiHeight = this.mouseY - this.roiY;
+          this.roiWidth = Math.max(
+            minWidth,
+            this.mouseX - this.roiX
+          );
+
+          this.roiHeight = Math.max(
+            minHeight,
+            this.mouseY - this.roiY
+          );
 
           break;
 
       }
 
-      // Impede tamanhos muito pequenos
-      this.roiWidth = Math.max(50, this.roiWidth);
-      this.roiHeight = Math.max(50, this.roiHeight);
+      // Não deixa sair do canvas
+
+      this.roiX = Math.max(0, this.roiX);
+      this.roiY = Math.max(0, this.roiY);
+
+      this.roiWidth = Math.min(
+        this.roiWidth,
+        this.canvas.nativeElement.width - this.roiX
+      );
+
+      this.roiHeight = Math.min(
+        this.roiHeight,
+        this.canvas.nativeElement.height - this.roiY
+      );
 
       // Mantém a linha dentro da ROI
+
       this.lineY = Math.max(
         this.roiY,
-        Math.min(this.lineY, this.roiY + this.roiHeight)
+        Math.min(
+          this.lineY,
+          this.roiY + this.roiHeight
+        )
       );
 
       return;
 
     }
-
     //==================================================
     // Move linha
     //==================================================
@@ -265,6 +321,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
       );
 
     }
+    this.updateCursor(this.mouseX, this.mouseY);
 
   };
 
@@ -406,6 +463,56 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
   }
 
+  private updateCursor(x: number, y: number): void {
+
+    const canvas = this.canvas.nativeElement;
+
+    const handle = this.hitHandle(x, y);
+
+    switch (handle) {
+
+      case ResizeHandle.TopLeft:
+      case ResizeHandle.BottomRight:
+
+        canvas.style.cursor = 'nwse-resize';
+        return;
+
+      case ResizeHandle.TopRight:
+      case ResizeHandle.BottomLeft:
+
+        canvas.style.cursor = 'nesw-resize';
+        return;
+
+    }
+
+    // Linha
+
+    if (
+
+      x >= this.roiX &&
+      x <= this.roiX + this.roiWidth &&
+      Math.abs(y - this.lineY) <= this.dragTolerance
+
+    ) {
+
+      canvas.style.cursor = 'ns-resize';
+      return;
+
+    }
+
+    // ROI
+
+    if (this.isInsideROI(x, y)) {
+
+      canvas.style.cursor = 'move';
+      return;
+
+    }
+
+    canvas.style.cursor = 'default';
+
+  }
+
   //=====================================================
   // Render
   //=====================================================
@@ -413,6 +520,12 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
   private render(): void {
 
     this.drawFrame();
+
+    const result = this.detectionService.detect();
+
+    this.detections = result.detections;
+
+    this.drawDetections();
 
     if (this.showROI)
       this.drawROI();
@@ -445,6 +558,44 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
       this.canvas.nativeElement.height
 
     );
+
+  }
+
+  private drawDetections(): void {
+
+    this.context.lineWidth = 2;
+
+    this.context.font = '16px Arial';
+
+    for (const detection of this.detections) {
+
+      this.context.strokeStyle = '#00FFFF';
+
+      this.context.strokeRect(
+
+        detection.x,
+
+        detection.y,
+
+        detection.width,
+
+        detection.height
+
+      );
+
+      this.context.fillStyle = '#00FFFF';
+
+      this.context.fillText(
+
+        `${detection.className} ${(detection.confidence * 100).toFixed(1)}%`,
+
+        detection.x,
+
+        detection.y - 8
+
+      );
+
+    }
 
   }
 
