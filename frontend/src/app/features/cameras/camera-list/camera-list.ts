@@ -3,7 +3,7 @@ import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
 
 import { CameraService } from '../../../services/camera.service';
-import { Camera } from '../../../models/camera';
+import { Camera } from '../models/camera';
 
 @Component({
   selector: 'app-camera-list',

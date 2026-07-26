@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
-import { Detection } from '../../../models/detection';
-import { FrameResult } from '../../../models/frame-result';
+import { Detection } from '../models/detection';
+import { FrameResult } from '../models/frame-result';
 
 @Injectable({
   providedIn: 'root'
@@ -38,7 +38,7 @@ export class DetectionService {
 
         classId: 0,
 
-        className: 'Bird',
+        className: 'Aves',
 
         confidence: 0.98,
 

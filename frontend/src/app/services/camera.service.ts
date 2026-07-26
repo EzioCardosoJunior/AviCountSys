@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 
 import { Observable, of } from 'rxjs';
 
-import { Camera } from '../models/camera';
+import { Camera } from '../features/cameras/models/camera';
 
 @Injectable({
     providedIn: 'root'

@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-import { ApiResponse } from '../models/api-response';
-import { Status } from '../models/status';
+import { ApiResponse } from '../features/cameras/models/api-response';
+import { Status } from '../features/cameras/models/status';
 
 @Injectable({
     providedIn: 'root'

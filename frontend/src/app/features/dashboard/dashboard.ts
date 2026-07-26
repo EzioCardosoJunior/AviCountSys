@@ -4,7 +4,7 @@ import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../services/api.service';
 
-import { Status } from '../../models/status';
+import { Status } from '../cameras/models/status';
 
 @Component({
   selector: 'app-dashboard',

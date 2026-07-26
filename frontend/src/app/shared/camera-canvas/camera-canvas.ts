@@ -5,9 +5,10 @@ import {
   OnDestroy,
   ViewChild
 } from '@angular/core';
-import { ResizeHandle } from '../../models/resize-handle';
+import { ResizeHandle } from '../../features/cameras/models/resize-handle';
 import { DetectionService } from '../../features/cameras/services/detection.service';
-import { Detection } from '../../models/detection';
+import { Detection } from '../../features/cameras/models/detection';
+import { CrossingDirection } from '../../features/cameras/models/crossing-direction';
 
 @Component({
   selector: 'app-camera-canvas',
@@ -62,6 +63,9 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
   private readonly handleSize = 10;
   private detections: Detection[] = [];
+  private previousCenterY = -1;
+  private totalCount = 0;
+  private lastDirection = CrossingDirection.None;
 
   async ngAfterViewInit(): Promise<void> {
 
@@ -526,6 +530,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
     this.detections = result.detections;
 
     this.drawDetections();
+    this.processCounting();
 
     if (this.showROI)
       this.drawROI();
@@ -596,6 +601,60 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
       );
 
     }
+
+  }
+
+  private processCounting(): void {
+
+    if (this.detections.length === 0) {
+
+      return;
+
+    }
+
+    const detection = this.detections[0];
+
+    const centerY = detection.y + (detection.height / 2);
+
+    if (this.previousCenterY >= 0) {
+
+      // Cruzou de cima para baixo
+
+      if (
+
+        this.previousCenterY < this.lineY &&
+        centerY >= this.lineY
+
+      ) {
+
+        this.totalCount++;
+
+        this.lastDirection = CrossingDirection.Down;
+
+        console.log('↓ Contou:', this.totalCount);
+
+      }
+
+      // Cruzou de baixo para cima
+
+      if (
+
+        this.previousCenterY > this.lineY &&
+        centerY <= this.lineY
+
+      ) {
+
+        this.totalCount++;
+
+        this.lastDirection = CrossingDirection.Up;
+
+        console.log('↑ Contou:', this.totalCount);
+
+      }
+
+    }
+
+    this.previousCenterY = centerY;
 
   }
 
@@ -689,15 +748,17 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.context.font = '18px Arial';
 
-    this.context.fillStyle = '#FFFF00';
+    this.context.fillStyle = '#00FF00';
+
+    this.context.font = '22px Arial';
 
     this.context.fillText(
 
-      `X:${Math.round(this.mouseX)}  Y:${Math.round(this.mouseY)}`,
+      `Total: ${this.totalCount}`,
 
       20,
 
-      30
+      60
 
     );
 
