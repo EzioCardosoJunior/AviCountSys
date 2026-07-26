@@ -9,14 +9,15 @@ import { FrameResult } from '../models/frame-result';
 export class DetectionService {
 
   private x = 100;
-
   private y = 180;
-
   private direction = 2;
+  private directionY = 1.5;
 
   detect(): FrameResult {
 
     this.x += this.direction;
+
+    this.y += this.directionY;
 
     if (this.x > 700) {
 
@@ -27,6 +28,18 @@ export class DetectionService {
     if (this.x < 100) {
 
       this.direction = 2;
+
+    }
+
+    if (this.y > 420) {
+
+      this.directionY = -1.5;
+
+    }
+
+    if (this.y < 60) {
+
+      this.directionY = 1.5;
 
     }
 

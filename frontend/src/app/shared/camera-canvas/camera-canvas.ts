@@ -9,6 +9,7 @@ import { ResizeHandle } from '../../features/cameras/models/resize-handle';
 import { DetectionService } from '../../features/cameras/services/detection.service';
 import { Detection } from '../../features/cameras/models/detection';
 import { CrossingDirection } from '../../features/cameras/models/crossing-direction';
+import { CountingService } from '../../features/cameras/services/counting.service';
 
 @Component({
   selector: 'app-camera-canvas',
@@ -25,7 +26,8 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
   canvas!: ElementRef<HTMLCanvasElement>;
 
   constructor(
-    private detectionService: DetectionService
+    private detectionService: DetectionService,
+    private countingService: CountingService
   ) { }
 
   // Mouse
@@ -63,10 +65,11 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
   private readonly handleSize = 10;
   private detections: Detection[] = [];
-  private previousCenterY = -1;
-  private totalCount = 0;
-  private lastDirection = CrossingDirection.None;
+  showDebug = true;
+  private fps = 0;
+  private lastFrameTime = performance.now();
 
+  private processingTime = 0;
   async ngAfterViewInit(): Promise<void> {
 
     this.registerEvents();
@@ -522,6 +525,11 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
   //=====================================================
 
   private render(): void {
+    const now = performance.now();
+
+    this.fps = Math.round(1000 / (now - this.lastFrameTime));
+
+    this.lastFrameTime = now;
 
     this.drawFrame();
 
@@ -529,8 +537,14 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.detections = result.detections;
 
+    this.processingTime = result.processingTime;
+
     this.drawDetections();
-    this.processCounting();
+
+    this.countingService.process(
+      this.detections,
+      this.lineY
+    );
 
     if (this.showROI)
       this.drawROI();
@@ -542,7 +556,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
       this.drawCoordinates();
 
     this.drawROIInfo();
-
+    this.drawDebug();
     this.animationId =
       requestAnimationFrame(() => this.render());
 
@@ -604,59 +618,6 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
   }
 
-  private processCounting(): void {
-
-    if (this.detections.length === 0) {
-
-      return;
-
-    }
-
-    const detection = this.detections[0];
-
-    const centerY = detection.y + (detection.height / 2);
-
-    if (this.previousCenterY >= 0) {
-
-      // Cruzou de cima para baixo
-
-      if (
-
-        this.previousCenterY < this.lineY &&
-        centerY >= this.lineY
-
-      ) {
-
-        this.totalCount++;
-
-        this.lastDirection = CrossingDirection.Down;
-
-        console.log('↓ Contou:', this.totalCount);
-
-      }
-
-      // Cruzou de baixo para cima
-
-      if (
-
-        this.previousCenterY > this.lineY &&
-        centerY <= this.lineY
-
-      ) {
-
-        this.totalCount++;
-
-        this.lastDirection = CrossingDirection.Up;
-
-        console.log('↑ Contou:', this.totalCount);
-
-      }
-
-    }
-
-    this.previousCenterY = centerY;
-
-  }
 
   private drawROI(): void {
 
@@ -754,7 +715,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.context.fillText(
 
-      `Total: ${this.totalCount}`,
+      `Total: ${this.countingService.getTotal()}`,
 
       20,
 
@@ -779,6 +740,55 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
       this.canvas.nativeElement.height - 20
 
     );
+
+  }
+
+  private drawDebug(): void {
+
+    if (!this.showDebug) {
+      return;
+    }
+
+    const lines = [
+
+      `FPS: ${this.fps}`,
+
+      `Processamento: ${this.processingTime} ms`,
+
+      `Detecções: ${this.detections.length}`,
+
+      `Contagem: ${this.countingService.getTotal()}`,
+
+      `ROI: (${Math.round(this.roiX)}, ${Math.round(this.roiY)}) ${Math.round(this.roiWidth)}x${Math.round(this.roiHeight)}`,
+
+      `Linha Y: ${Math.round(this.lineY)}`
+
+    ];
+
+    const x = 15;
+    const y = 90;
+    const lineHeight = 20;
+
+    this.context.fillStyle = 'rgba(0,0,0,0.65)';
+    this.context.fillRect(
+      x - 10,
+      y - 20,
+      330,
+      (lines.length * lineHeight) + 20
+    );
+
+    this.context.fillStyle = '#00FF00';
+    this.context.font = '16px Consolas';
+
+    lines.forEach((line, index) => {
+
+      this.context.fillText(
+        line,
+        x,
+        y + (index * lineHeight)
+      );
+
+    });
 
   }
 
