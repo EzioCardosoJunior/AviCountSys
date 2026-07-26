@@ -144,7 +144,66 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
     this.mouseY =
       (event.clientY - rect.top) * scaleY;
 
+    //==================================================
+    // Redimensionamento da ROI
+    //==================================================
+
+    if (this.resizing !== ResizeHandle.None) {
+
+      switch (this.resizing) {
+
+        case ResizeHandle.TopLeft:
+
+          this.roiWidth += this.roiX - this.mouseX;
+          this.roiHeight += this.roiY - this.mouseY;
+          this.roiX = this.mouseX;
+          this.roiY = this.mouseY;
+
+          break;
+
+        case ResizeHandle.TopRight:
+
+          this.roiWidth = this.mouseX - this.roiX;
+          this.roiHeight += this.roiY - this.mouseY;
+          this.roiY = this.mouseY;
+
+          break;
+
+        case ResizeHandle.BottomLeft:
+
+          this.roiWidth += this.roiX - this.mouseX;
+          this.roiX = this.mouseX;
+          this.roiHeight = this.mouseY - this.roiY;
+
+          break;
+
+        case ResizeHandle.BottomRight:
+
+          this.roiWidth = this.mouseX - this.roiX;
+          this.roiHeight = this.mouseY - this.roiY;
+
+          break;
+
+      }
+
+      // Impede tamanhos muito pequenos
+      this.roiWidth = Math.max(50, this.roiWidth);
+      this.roiHeight = Math.max(50, this.roiHeight);
+
+      // Mantém a linha dentro da ROI
+      this.lineY = Math.max(
+        this.roiY,
+        Math.min(this.lineY, this.roiY + this.roiHeight)
+      );
+
+      return;
+
+    }
+
+    //==================================================
     // Move linha
+    //==================================================
+
     if (this.draggingLine) {
 
       this.lineY = Math.max(
@@ -161,9 +220,14 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
       );
 
+      return;
+
     }
 
+    //==================================================
     // Move ROI
+    //==================================================
+
     if (this.draggingROI) {
 
       this.roiX = Math.max(
@@ -220,7 +284,24 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
     const y =
       (event.clientY - rect.top) * scaleY;
 
-    // Prioridade para a linha
+    //==================================================
+    // 1 - Handles (prioridade máxima)
+    //==================================================
+
+    const handle = this.hitHandle(x, y);
+
+    if (handle !== ResizeHandle.None) {
+
+      this.resizing = handle;
+
+      return;
+
+    }
+
+    //==================================================
+    // 2 - Linha de contagem
+    //==================================================
+
     if (
 
       x >= this.roiX &&
@@ -235,7 +316,9 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     }
 
-    // Depois a ROI
+    //==================================================
+    // 3 - ROI
+    //==================================================
 
     if (this.isInsideROI(x, y)) {
 
@@ -247,16 +330,6 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     }
 
-    const handle = this.hitHandle(x, y);
-
-    if (handle !== ResizeHandle.None) {
-
-      this.resizing = handle;
-
-      return;
-
-    }
-
   };
 
   private onMouseUp = (): void => {
@@ -265,6 +338,8 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.draggingROI = false;
 
+    this.resizing = ResizeHandle.None;
+
   };
 
   private onMouseLeave = (): void => {
@@ -272,6 +347,8 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
     this.draggingLine = false;
 
     this.draggingROI = false;
+
+    this.resizing = ResizeHandle.None;
 
   };
 
@@ -289,6 +366,43 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
       y <= this.roiY + this.roiHeight
 
     );
+
+  }
+
+
+  private hitHandle(x: number, y: number): ResizeHandle {
+
+    const hs = this.handleSize;
+
+    if (
+      Math.abs(x - this.roiX) <= hs &&
+      Math.abs(y - this.roiY) <= hs
+    ) {
+      return ResizeHandle.TopLeft;
+    }
+
+    if (
+      Math.abs(x - (this.roiX + this.roiWidth)) <= hs &&
+      Math.abs(y - this.roiY) <= hs
+    ) {
+      return ResizeHandle.TopRight;
+    }
+
+    if (
+      Math.abs(x - this.roiX) <= hs &&
+      Math.abs(y - (this.roiY + this.roiHeight)) <= hs
+    ) {
+      return ResizeHandle.BottomLeft;
+    }
+
+    if (
+      Math.abs(x - (this.roiX + this.roiWidth)) <= hs &&
+      Math.abs(y - (this.roiY + this.roiHeight)) <= hs
+    ) {
+      return ResizeHandle.BottomRight;
+    }
+
+    return ResizeHandle.None;
 
   }
 
