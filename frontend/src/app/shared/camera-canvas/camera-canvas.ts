@@ -10,6 +10,8 @@ import { DetectionService } from '../../features/cameras/services/detection.serv
 import { Detection } from '../../features/cameras/models/detection';
 import { CrossingDirection } from '../../features/cameras/models/crossing-direction';
 import { CountingService } from '../../features/cameras/services/counting.service';
+import { TrackingService } from '../../features/cameras/services/tracking.service';
+import { TrackedObject } from '../../features/cameras/models/tracked-object';
 
 @Component({
   selector: 'app-camera-canvas',
@@ -27,6 +29,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
   constructor(
     private detectionService: DetectionService,
+    private trackingService: TrackingService,
     private countingService: CountingService
   ) { }
 
@@ -68,6 +71,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
   showDebug = true;
   private fps = 0;
   private lastFrameTime = performance.now();
+  private trackedObjects: TrackedObject[] = [];
 
   private processingTime = 0;
   async ngAfterViewInit(): Promise<void> {
@@ -536,7 +540,8 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
     const result = this.detectionService.detect();
 
     this.detections = result.detections;
-
+    this.trackedObjects =
+      this.trackingService.update(this.detections);
     this.processingTime = result.processingTime;
 
     this.drawDetections();
@@ -586,7 +591,9 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.context.font = '16px Arial';
 
-    for (const detection of this.detections) {
+    for (const tracked of this.trackedObjects) {
+
+      const detection = tracked.detection;
 
       this.context.strokeStyle = '#00FFFF';
 
@@ -606,7 +613,7 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
       this.context.fillText(
 
-        `${detection.className} ${(detection.confidence * 100).toFixed(1)}%`,
+        `#${tracked.id} ${detection.className} ${(detection.confidence * 100).toFixed(1)}%`,
 
         detection.x,
 
@@ -761,7 +768,9 @@ export class CameraCanvasComponent implements AfterViewInit, OnDestroy {
 
       `ROI: (${Math.round(this.roiX)}, ${Math.round(this.roiY)}) ${Math.round(this.roiWidth)}x${Math.round(this.roiHeight)}`,
 
-      `Linha Y: ${Math.round(this.lineY)}`
+      `Linha Y: ${Math.round(this.lineY)}`,
+
+      `Objetos rastreados: ${this.trackedObjects.length}`
 
     ];
 
